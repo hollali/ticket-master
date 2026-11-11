@@ -1,33 +1,19 @@
-# Ticket Master (Flutter + Firebase)
+# Ticket Master (Flutter + Supabase)
 
-A Ticketmaster-like ticketing app built with Flutter and Firebase (Auth, Firestore, Storage).
+A Ticketmaster-like ticketing app built with Flutter and Supabase (Auth, Postgres, Storage).
 
 ## Setup
-1. Install Flutter and Firebase CLI.
-2. Create a Firebase project, enable Authentication (Email/Password) and Firestore.
-3. In project root, run:
-   ```
-   flutterfire configure
-   ```
-   This generates `lib/firebase_options.dart`. Replace the placeholder file.
-4. Create Firestore collections:
-   - `events` (fields: title, description, category, venueName, venueCity, imageUrl, startTime, endTime, status)
-   - `events/{id}/tiers` (fields: name, price, quantity, available, eventId)
-   - `users`, `bookings` (created by app)
+1. Install Flutter.
+2. Create a Supabase project.
+3. Run the SQL in `supabase/schema.sql` in the Supabase SQL Editor.
+4. Update `lib/main.dart` with your Supabase project URL and anon (publishable) key.
 5. Run:
    ```
+   flutter pub get
    flutter run
    ```
 
-## Firestore Rules (example)
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /events/{e} { allow read: if true; }
-    match /events/{e}/tiers/{t} { allow read: if true; allow write: if request.auth != null; }
-    match /users/{u} { allow read, write: if request.auth.uid == u; }
-    match /bookings/{b} { allow read, write: if request.auth.uid == resource.data.userId; }
-  }
-}
-```
+## Supabase Tables
+- `events` (title, description, category, venue_name, venue_city, image_url, start_time, end_time, status)
+- `ticket_tiers` (event_id, name, price, quantity, available)
+- `users`, `bookings`, `booking_items`, `tickets` (created by app)
