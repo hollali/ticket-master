@@ -1,33 +1,46 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/event.dart';
 import '../models/ticket_tier.dart';
 
 class EventService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final SupabaseClient _client = Supabase.instance.client;
 
   Stream<List<Event>> events({String? category, String? search}) {
-    Query q = _db.collection('events').where('status', isEqualTo: 'published').orderBy('startTime');
-    if (category != null && category.isNotEmpty) {
-      q = q.where('category', isEqualTo: category);
-    }
-    return q.snapshots().map((snap) {
-      var list = snap.docs.map((d) => Event.fromMap(d.id, d.data() as Map<String, dynamic>)).toList();
+    return _client.from('events').stream(primaryKey: ['id']).map((rows) {
+      var list = rows
+          .where((r) => (r['status'] ?? 'published') == 'published')
+          .map((r) => Event.fromMap(r['id'].toString(), r))
+          .toList();
+      if (category != null && category.isNotEmpty) {
+        list = list.where((e) => e.category == category).toList();
+      }
       if (search != null && search.isNotEmpty) {
         final s = search.toLowerCase();
-        list = list.where((e) => e.title.toLowerCase().contains(s) || (e.description ?? '').toLowerCase().contains(s)).toList();
+        list = list
+            .where((e) =>
+                e.title.toLowerCase().contains(s) ||
+                (e.description ?? '').toLowerCase().contains(s))
+            .toList();
       }
+      list.sort((a, b) => a.startTime.compareTo(b.startTime));
       return list;
     });
   }
 
   Future<Event?> event(String id) async {
-    final doc = await _db.collection('events').doc(id).get();
-    if (!doc.exists) return null;
-    return Event.fromMap(doc.id, doc.data()!);
+    final res = await _client.from('events').select().eq('id', id).maybeSingle();
+    if (res == null) return null;
+    return Event.fromMap(res['id'].toString(), res);
   }
 
   Stream<List<TicketTier>> tiers(String eventId) {
-    return _db.collection('events').doc(eventId).collection('tiers').orderBy('price')
-        .snapshots().map((s) => s.docs.map((d) => TicketTier.fromMap(d.id, {...d.data(), 'eventId': eventId})).toList());
+    return _client.from('ticket_tiers').stream(primaryKey: ['id']).map((rows) {
+      final list = rows
+          .where((r) => r['event_id'] == eventId)
+          .map((r) => TicketTier.fromMap(r['id'].toString(), r))
+          .toList();
+      list.sort((a, b) => a.price.compareTo(b.price));
+      return list;
+    });
   }
 }

@@ -17,7 +17,7 @@ class TicketTier {
 
   factory TicketTier.fromMap(String id, Map<String, dynamic> m) => TicketTier(
         id: id,
-        eventId: m['eventId'] ?? '',
+        eventId: (m['event_id'] ?? m['eventId'] ?? '').toString(),
         name: m['name'] ?? '',
         price: (m['price'] as num?)?.toDouble() ?? 0,
         quantity: m['quantity'] ?? 0,

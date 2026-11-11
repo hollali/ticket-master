@@ -1,36 +1,40 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final SupabaseClient _client = Supabase.instance.client;
 
-  Stream<User?> authState() => _auth.authStateChanges();
+  Stream<AuthState> authState() => _client.auth.onAuthStateChange;
 
-  User? get currentUser => _auth.currentUser;
+  User? get currentUser => _client.auth.currentUser;
 
-  Future<UserCredential> register(String name, String email, String password) async {
-    final cred = await _auth.createUserWithEmailAndPassword(email: email, password: password);
-    await cred.user?.updateDisplayName(name);
-    await _db.collection('users').doc(cred.user!.uid).set({
-      'name': name,
-      'email': email,
-      'role': 'user',
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-    return cred;
+  Future<AuthResponse> register(String name, String email, String password) async {
+    final res = await _client.auth.signUp(
+      email: email,
+      password: password,
+      data: {'name': name},
+    );
+    final user = res.user;
+    if (user != null) {
+      await _client.from('users').upsert({
+        'id': user.id,
+        'name': name,
+        'email': email,
+        'role': 'user',
+      });
+    }
+    return res;
   }
 
-  Future<UserCredential> login(String email, String password) async {
-    return _auth.signInWithEmailAndPassword(email: email, password: password);
+  Future<AuthResponse> login(String email, String password) async {
+    return _client.auth.signInWithPassword(email: email, password: password);
   }
 
-  Future<void> logout() => _auth.signOut();
+  Future<void> logout() => _client.auth.signOut();
 
   Future<Map<String, dynamic>?> profile() async {
-    final u = _auth.currentUser;
+    final u = currentUser;
     if (u == null) return null;
-    final doc = await _db.collection('users').doc(u.uid).get();
-    return doc.data();
+    final res = await _client.from('users').select().eq('id', u.id).maybeSingle();
+    return res;
   }
 }

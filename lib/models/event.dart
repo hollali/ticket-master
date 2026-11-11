@@ -23,16 +23,24 @@ class Event {
     this.status = 'published',
   });
 
+  static DateTime _parse(dynamic v) {
+    if (v == null) return DateTime.now();
+    if (v is DateTime) return v;
+    return DateTime.parse(v.toString());
+  }
+
   factory Event.fromMap(String id, Map<String, dynamic> m) => Event(
         id: id,
         title: m['title'] ?? '',
         description: m['description'],
         category: m['category'],
-        venueName: m['venueName'],
-        venueCity: m['venueCity'],
-        imageUrl: m['imageUrl'],
-        startTime: (m['startTime'] as dynamic)?.toDate() ?? DateTime.now(),
-        endTime: (m['endTime'] as dynamic)?.toDate(),
+        venueName: m['venue_name'] ?? m['venueName'],
+        venueCity: m['venue_city'] ?? m['venueCity'],
+        imageUrl: m['image_url'] ?? m['imageUrl'],
+        startTime: _parse(m['start_time'] ?? m['startTime']),
+        endTime: (m['end_time'] ?? m['endTime']) != null
+            ? _parse(m['end_time'] ?? m['endTime'])
+            : null,
         status: m['status'] ?? 'published',
       );
 
@@ -40,11 +48,11 @@ class Event {
         'title': title,
         'description': description,
         'category': category,
-        'venueName': venueName,
-        'venueCity': venueCity,
-        'imageUrl': imageUrl,
-        'startTime': startTime,
-        'endTime': endTime,
+        'venue_name': venueName,
+        'venue_city': venueCity,
+        'image_url': imageUrl,
+        'start_time': startTime.toIso8601String(),
+        'end_time': endTime?.toIso8601String(),
         'status': status,
       };
 }
