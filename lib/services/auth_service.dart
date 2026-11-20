@@ -14,7 +14,7 @@ class AuthService {
       data: {'name': name},
     );
     final user = res.user;
-    if (user != null) {
+    if (user != null && _client.auth.currentSession != null) {
       await _client.from('users').upsert({
         'id': user.id,
         'name': name,
@@ -34,7 +34,16 @@ class AuthService {
   Future<Map<String, dynamic>?> profile() async {
     final u = currentUser;
     if (u == null) return null;
-    final res = await _client.from('users').select().eq('id', u.id).maybeSingle();
+    var res = await _client.from('users').select().eq('id', u.id).maybeSingle();
+    if (res == null) {
+      await _client.from('users').upsert({
+        'id': u.id,
+        'name': u.userMetadata?['name'],
+        'email': u.email,
+        'role': 'user',
+      });
+      res = await _client.from('users').select().eq('id', u.id).maybeSingle();
+    }
     return res;
   }
 }
